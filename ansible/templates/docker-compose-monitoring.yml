@@ -8,7 +8,7 @@ services:
     ports:
       - "{{ prometheus_port }}:9090"
     volumes:
-      - {{ monitoring_install_dir }}/prometheus.yml:/etc/prometheus/prometheus.yml
+      - {{ monitoring_install_dir }}/prometheus:/etc/prometheus
       - {{ prometheus_data_dir }}:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'

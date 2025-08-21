@@ -6,101 +6,216 @@
     - group_vars/all.yml
 
   tasks:
-    - name: Update apt package cache
+    - name: Remove existing Docker installations
       apt:
-        update_cache: yes
-      when: ansible_os_family == "Debian"
-
-    - name: Install required system packages
-      package:
         name:
+          - docker.io
+          - docker-doc
+          - docker-compose
+          - docker-compose-v2
+          - podman-docker
+          - containerd
+          - runc
+        state: absent
+        purge: yes
+      ignore_errors: yes
+
+    - name: Remove existing Docker repositories and keys
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/apt/sources.list.d/docker.list
+        - /etc/apt/sources.list.d/docker.list.save
+        - /etc/apt/keyrings/docker.asc
+        - /usr/share/keyrings/docker-archive-keyring.gpg
+
+    - name: Install prerequisites
+      apt:
+        name:
+          - ca-certificates
           - curl
-          - wget
           - gnupg
+          - lsb-release
           - software-properties-common
         state: present
-      when: ansible_os_family == "Debian"
+        update_cache: yes
 
-    - name: Add Docker GPG key
+    - name: Add Docker's official GPG key
       apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
         state: present
-      when: ansible_os_family == "Debian"
 
     - name: Add Docker repository
       apt_repository:
         repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
         state: present
-      when: ansible_os_family == "Debian"
 
-    - name: Install Docker
-      package:
+    - name: Install Docker components
+      apt:
         name:
           - docker-ce
           - docker-ce-cli
           - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
         state: present
-      when: ansible_os_family == "Debian"
+        update_cache: yes
 
-    - name: Install Docker Compose
+    - name: Install Docker Compose standalone
       get_url:
-        url: https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-linux-x86_64
+        url: "https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-linux-x86_64"
         dest: /usr/local/bin/docker-compose
         mode: '0755'
 
-    - name: Ensure Docker service is started and enabled
+    - name: Ensure Docker is running and enabled
       systemd:
         name: docker
         state: started
         enabled: yes
 
-    - name: Create directory for x-ui
-      file:
-        path: "{{ xui_install_dir }}"
-        state: directory
-        mode: '0755'
+    - name: Add user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
 
-    - name: Create directory for monitoring
+    - name: Create directory structure
       file:
-        path: "{{ monitoring_install_dir }}"
+        path: "{{ item }}"
         state: directory
         mode: '0755'
+      loop:
+        - "{{ xui_install_dir }}"
+        - "{{ xui_install_dir }}/db"
+        - "{{ xui_install_dir }}/cert"
+        - "{{ monitoring_install_dir }}"
+        - "{{ monitoring_install_dir }}/prometheus"
+        - "{{ monitoring_install_dir }}/grafana/provisioning"
+        - "{{ prometheus_data_dir }}"
+        - "{{ grafana_data_dir }}"
+
+    - name: Set proper permissions for Prometheus data directory
+      file:
+        path: "{{ prometheus_data_dir }}"
+        owner: "65534"
+        group: "65534"
+        mode: '0755'
+        state: directory
+      ignore_errors: yes
+
+    - name: Set proper permissions for Grafana data directory
+      file:
+        path: "{{ grafana_data_dir }}"
+        owner: "472"
+        group: "472"
+        mode: '0755'
+        state: directory
+      ignore_errors: yes    
+    
+    - name: Stop and remove existing x-ui containers
+      command: docker-compose -f {{ xui_install_dir }}/docker-compose.yml down
+      args:
+        chdir: "{{ xui_install_dir }}"
+      ignore_errors: yes
+
+    - name: Remove any remaining x-ui containers
+      shell: |
+        docker rm -f 3xui_app 2>/dev/null || true
+        docker network rm 3x-ui_default 2>/dev/null || true
+      ignore_errors: yes
+
+    - name: Stop and remove existing monitoring containers
+      command: docker-compose -f {{ monitoring_install_dir }}/docker-compose.yml down
+      args:
+        chdir: "{{ monitoring_install_dir }}"
+      ignore_errors: yes
+
+    - name: Remove any remaining monitoring containers
+      shell: |
+        docker rm -f prometheus grafana node-exporter 2>/dev/null || true
+        docker network rm monitoring_monitoring-network 2>/dev/null || true
+      ignore_errors: yes
 
     - name: Deploy x-ui docker-compose
       template:
-        src: templates/docker-compose-xui.j2
+        src: docker-compose-3xui.yml
         dest: "{{ xui_install_dir }}/docker-compose.yml"
-      notify: Restart x-ui
 
     - name: Deploy monitoring docker-compose
       template:
-        src: templates/docker-compose-monitoring.j2
+        src: docker-compose-monitoring.yml
         dest: "{{ monitoring_install_dir }}/docker-compose.yml"
-      notify: Restart monitoring
 
-    - name: Pull Docker images
-      docker_compose:
-        project_src: "{{ item.install_dir }}"
-        pull: yes
+    - name: Configure Prometheus
+      template:
+        src: prometheus.yml
+        dest: "{{ monitoring_install_dir }}/prometheus/prometheus.yml"
+
+    - name: Start x-ui service
+      command: docker-compose -f {{ xui_install_dir }}/docker-compose.yml up -d
+      args:
+        chdir: "{{ xui_install_dir }}"
+
+    - name: Start monitoring services
+      command: docker-compose -f {{ monitoring_install_dir }}/docker-compose.yml up -d
+      args:
+        chdir: "{{ monitoring_install_dir }}"
+
+    - name: Set permissions for x-ui directories
+      file:
+        path: "{{ item }}"
+        owner: "1000"
+        group: "1000"
+        mode: '0755'
       loop:
-        - { install_dir: "{{ xui_install_dir }}" }
-        - { install_dir: "{{ monitoring_install_dir }}" }
+        - "{{ xui_install_dir }}/db"
+        - "{{ xui_install_dir }}/cert"
 
-    - name: Start containers
-      docker_compose:
-        project_src: "{{ item.install_dir }}"
-        state: present
-      loop:
-        - { install_dir: "{{ xui_install_dir }}" }
-        - { install_dir: "{{ monitoring_install_dir }}" }
+    - name: Deploy x-ui docker-compose
+      template:
+        src: docker-compose-3xui.yml
+        dest: "{{ xui_install_dir }}/docker-compose.yml"
 
-  handlers:
-    - name: Restart x-ui
-      docker_compose:
-        project_src: "{{ xui_install_dir }}"
-        state: restarted
+    - name: Deploy monitoring docker-compose
+      template:
+        src: docker-compose-monitoring.yml
+        dest: "{{ monitoring_install_dir }}/docker-compose.yml"
 
-    - name: Restart monitoring
-      docker_compose:
-        project_src: "{{ monitoring_install_dir }}"
-        state: restarted
+    - name: Configure Prometheus
+      template:
+        src: prometheus.yml
+        dest: "{{ monitoring_install_dir }}/prometheus/prometheus.yml"
+
+    - name: Start x-ui service
+      command: docker-compose -f {{ xui_install_dir }}/docker-compose.yml up -d
+      args:
+        chdir: "{{ xui_install_dir }}"
+
+    - name: Start monitoring services
+      command: docker-compose -f {{ monitoring_install_dir }}/docker-compose.yml up -d
+      args:
+        chdir: "{{ monitoring_install_dir }}"
+
+    - name: Wait for x-ui to start
+      wait_for:
+        port: "{{ xui_web_port }}"
+        timeout: 120
+
+    - name: Wait for Prometheus to start
+      wait_for:
+        port: "{{ prometheus_port }}"
+        timeout: 120
+
+    - name: Wait for Grafana to start
+      wait_for:
+        port: "{{ grafana_port }}"
+        timeout: 120
+
+    - name: Show deployment status
+      debug:
+        msg: |
+          X-UI is available at http://{{ ansible_host }}:{{ xui_web_port }}
+          Prometheus is available at http://{{ ansible_host }}:{{ prometheus_port }}
+          Grafana is available at http://{{ ansible_host }}:{{ grafana_port }}
+          Grafana admin password: {{ grafana_admin_password }}

@@ -1,0 +1,15 @@
+[all]
+vpn-server ansible_host=192.168.122.47 ansible_user=ivv7
+
+[xui_servers]
+vpn-server
+
+[monitoring_servers]
+vpn-server
+
+[all:vars]
+ansible_ssh_private_key_file=~/.ssh/deploy_key
+ansible_python_interpreter=/usr/bin/python3
+
+
+

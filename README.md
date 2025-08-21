@@ -1,68 +1,39 @@
-# Automated Deployment of x-ui with Monitoring
+# Run ansible playbook ONLY ON CLEAN SERVERS (with configured ssh connection). If you have running docker containers or prometheus, or grafana monitoring, save them before running this repository.
 
-This repository contains Ansible playbooks and GitHub Actions workflow to deploy x-ui VPN service along with Prometheus and Grafana for monitoring.
+# 3x-UI Deployment with Monitoring
 
-# Prerequisites
+Automated deployment of 3x-UI VPN server with Prometheus and Grafana monitoring.
 
-- A server with SSH access (Ubuntu 20.04/22.04 recommended)
-- SSH private key for accessing the server
-- Fork this repository
+# Quick Start
 
-# Setup
+1. Clone the repository
 
-1. Clone your forked repository:
- 
-   git clone https://github.com/ivv78/3xui-automatic-deploy.git
-   cd your-project-repo
+2. Copy configuration examples:
+   ```bash
+   cp ansible/inventory/hosts.example ansible/inventory/production
+   cp ansible/group_vars/all.example ansible/group_vars/all.yml
 
-2. Prepare inventory file
- 
-   cd ansible/inventory
-   cp hosts.example production
+3. Edit the configuration files with your settings
 
-   Edit production and replace the example IP with your server's IP
+4. Run the playbook:
+   ansible-playbook -i ansible/inventory/production ansible/playbook.yml --ask-become-pass
 
-3. Prepare variables file:
- 
-   cd ../group_vars
-   cp all.example all.yml
+# Access
 
-   Edit all.yml and set your values for passwords, ports, etc.
-
-4. Set up GitHub Secrets:
-
-   Go to your repository settings on GitHub.
-
-   Navigate to "Secrets and variables" > "Actions".
-
-   Add the following secrets:
-
-   SSH_PRIVATE_KEY - your SSH private key for server access
-
-   SERVER_IP - your server IP address
-
-5.  Run the deployment:
-
-   Go to the "Actions" tab of your repository.
-
-   Select "Deploy Infrastructure with Ansible".
-
-   Click "Run workflow".
-
-
-# Access Services
-
-After deployment, you can access:
-
-    x-ui panel: http://your-server-ip:54321
+    3x-UI Panel: https://your-server-ip:2053
 
     Prometheus: http://your-server-ip:9090
 
-    Grafana: http://your-server-ip:3000 (admin/your_password)
+    Grafana: http://your-server-ip:3000
 
-# Notes
+# Features
 
-    The files inventory/production and group_vars/all.yml are ignored by Git to prevent accidental exposure of sensitive data.
+    VPN server with 3x-UI
 
-    Make sure your server has a firewall allowing ports for x-ui (54321), Prometheus (9090), and Grafana (3000).
+    System metrics monitoring with Node Exporter
 
+    Traffic usage statistics
+
+    Connection monitoring
+
+    Automated SSL certificate management

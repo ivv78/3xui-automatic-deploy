@@ -1,20 +1,17 @@
 version: '3.8'
 
 services:
-  x-ui:
+  3x-ui:
     image: {{ xui_image }}
-    container_name: x-ui
+    container_name: 3xui_app
     restart: unless-stopped
     ports:
-      - "{{ xui_web_port }}:54321"
+      - "{{ xui_web_port }}:2053"
     volumes:
-      - {{ xui_install_dir }}/data:/etc/x-ui
-      - {{ xui_install_dir }}/ssl:{{ xui_ssl_path }}
+      - {{ xui_install_dir }}/db:/etc/x-ui
+      - {{ xui_install_dir }}/cert:/root/cert
     environment:
       - TZ={{ timezone }}
-    networks:
-      - xui-network
-
-networks:
-  xui-network:
-    driver: bridge
+    cap_add:
+      - NET_ADMIN
+    privileged: true
