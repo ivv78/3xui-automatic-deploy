@@ -1,17 +1,13 @@
-# Inventory file example
-
 [all]
-vpn-server ansible_host=192.168.1.100 ansible_user=root
+vpn-server ansible_host=your_host ansible_user=your_user
 
-# Группа для серверов с x-ui
 [xui_servers]
 vpn-server
 
-# Группа для серверов мониторинга
 [monitoring_servers]
 vpn-server
 
 [all:vars]
-# Настройки подключения
 ansible_ssh_private_key_file=~/.ssh/deploy_key
 ansible_python_interpreter=/usr/bin/python3
+

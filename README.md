@@ -10,13 +10,13 @@ Automated deployment of 3x-UI VPN server with Prometheus and Grafana monitoring.
 
 2. Copy configuration examples:
    ```bash
-   cp ansible/inventory/hosts.example ansible/inventory/production
+   cp ansible/inventory/hosts.example ansible/inventory/hosts.yml
    cp ansible/group_vars/all.example ansible/group_vars/all.yml
 
 3. Edit the configuration files with your settings
 
 4. Run the playbook:
-   ansible-playbook -i ansible/inventory/production ansible/playbook.yml --ask-become-pass
+   ansible-playbook -i ansible/inventory/hosts.yml ansible/playbook.yml --ask-become-pass
 
 # Access
 
