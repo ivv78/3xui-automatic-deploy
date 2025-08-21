@@ -1,0 +1,106 @@
+---
+- name: Deploy x-ui and monitoring stack
+  hosts: all
+  become: yes
+  vars_files:
+    - group_vars/all.yml
+
+  tasks:
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install required system packages
+      package:
+        name:
+          - curl
+          - wget
+          - gnupg
+          - software-properties-common
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install Docker
+      package:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install Docker Compose
+      get_url:
+        url: https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+
+    - name: Ensure Docker service is started and enabled
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Create directory for x-ui
+      file:
+        path: "{{ xui_install_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create directory for monitoring
+      file:
+        path: "{{ monitoring_install_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Deploy x-ui docker-compose
+      template:
+        src: templates/docker-compose-xui.j2
+        dest: "{{ xui_install_dir }}/docker-compose.yml"
+      notify: Restart x-ui
+
+    - name: Deploy monitoring docker-compose
+      template:
+        src: templates/docker-compose-monitoring.j2
+        dest: "{{ monitoring_install_dir }}/docker-compose.yml"
+      notify: Restart monitoring
+
+    - name: Pull Docker images
+      docker_compose:
+        project_src: "{{ item.install_dir }}"
+        pull: yes
+      loop:
+        - { install_dir: "{{ xui_install_dir }}" }
+        - { install_dir: "{{ monitoring_install_dir }}" }
+
+    - name: Start containers
+      docker_compose:
+        project_src: "{{ item.install_dir }}"
+        state: present
+      loop:
+        - { install_dir: "{{ xui_install_dir }}" }
+        - { install_dir: "{{ monitoring_install_dir }}" }
+
+  handlers:
+    - name: Restart x-ui
+      docker_compose:
+        project_src: "{{ xui_install_dir }}"
+        state: restarted
+
+    - name: Restart monitoring
+      docker_compose:
+        project_src: "{{ monitoring_install_dir }}"
+        state: restarted

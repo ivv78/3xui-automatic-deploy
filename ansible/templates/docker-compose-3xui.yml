@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  x-ui:
+    image: {{ xui_image }}
+    container_name: x-ui
+    restart: unless-stopped
+    ports:
+      - "{{ xui_web_port }}:54321"
+    volumes:
+      - {{ xui_install_dir }}/data:/etc/x-ui
+      - {{ xui_install_dir }}/ssl:{{ xui_ssl_path }}
+    environment:
+      - TZ={{ timezone }}
+    networks:
+      - xui-network
+
+networks:
+  xui-network:
+    driver: bridge
