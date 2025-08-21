@@ -1,0 +1,3 @@
+ansible/iventory/production
+ansible/group_vars/all.yml
+ansible/*.retry
