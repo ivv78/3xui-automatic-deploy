@@ -1,3 +1,3 @@
-ansible/iventory/hosts.yml
+ansible/inventory/hosts.yml
 ansible/group_vars/all.yml
 ansible/*.retry
