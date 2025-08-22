@@ -9,6 +9,7 @@ Run ansible playbook on new, empty server. If you have running docker containers
 2. Copy configuration examples:
  
    cp ansible/inventory/hosts.example ansible/inventory/hosts.yml
+   
    cp ansible/group_vars/all.example ansible/group_vars/all.yml
 
 3. Edit the configuration files with your settings
