@@ -1,21 +1,20 @@
-# Run ansible playbook ONLY ON CLEAN SERVERS (with configured ssh connection). If you have running docker containers or prometheus, or grafana monitoring, save them before running this repository.
+# Automated deployment of 3x-UI VPN server with Prometheus and Grafana monitoring.
 
-# 3x-UI Deployment with Monitoring
-
-Automated deployment of 3x-UI VPN server with Prometheus and Grafana monitoring.
+Run ansible playbook on new, empty server. If you have running docker containers, prometheus, grafana monitoring, save them before running this repository.
 
 # Quick Start
 
 1. Clone the repository
 
 2. Copy configuration examples:
-   ```bash
+ 
    cp ansible/inventory/hosts.example ansible/inventory/hosts.yml
    cp ansible/group_vars/all.example ansible/group_vars/all.yml
 
 3. Edit the configuration files with your settings
 
-4. Run the playbook:
+4. Run the playbook (All ansible playbooks are running through SSH connection, private key file directory specified in hosts.yml "ansible_ssh_private_key_file"):
+   
    ansible-playbook -i ansible/inventory/hosts.yml ansible/playbook.yml --ask-become-pass
 
 # Access
