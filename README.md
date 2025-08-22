@@ -1,6 +1,6 @@
 # Automated deployment of 3x-UI VPN server with Prometheus and Grafana monitoring.
 
-Run ansible playbook on new, empty server. If you have running docker containers, prometheus, grafana monitoring, save them before running this repository.
+Run ansible playbook on new, empty server. If you have active docker containers, prometheus, grafana monitoring, save them before running this repository.
 
 # Quick Start
 
