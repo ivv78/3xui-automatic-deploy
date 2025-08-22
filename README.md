@@ -26,7 +26,7 @@ Run ansible playbook on new, empty server. If you have active docker containers,
 
     Grafana: http://your-server-ip:3000
 
-!panel.png !dashboard1.png !dashboard2.png
+!(panel.png) !(dashboard1.png) !(dashboard2.png)
 
 # Features
 
